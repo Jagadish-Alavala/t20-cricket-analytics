@@ -1,0 +1,13 @@
+{
+  "wp1_auc": 0.601,
+  "wp1_brier": 0.244,
+  "wp2_ml_auc": 0.758,
+  "wp2_ml_brier": 0.199,
+  "wp2_dl_auc": 0.857,
+  "wp2_dl_brier": 0.156,
+  "ml_beats_dl": false,
+  "chase_wpa_uses": "DL power-law (beats ML even with DL backbone feature, out-of-sample)",
+  "first_innings_wp_signal": "weak by nature (AUC ~0.60): WPA under-credits 1st-innings batting",
+  "recommended_next": "hybrid currency: expected-runs impact for 1st innings, WPA for chase",
+  "wpa_currency": "wins added (win-probability units, both innings unified)"
+}

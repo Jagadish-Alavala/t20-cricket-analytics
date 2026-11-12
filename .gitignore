@@ -1,0 +1,21 @@
+.DS_Store
+__pycache__/
+node_modules/
+*.pyc
+_*.jpg
+.~lock*
+*.parquet
+processed_data*
+evaluation_results/
+*.pkl
+*.joblib
+.env
+cricket.db
+exports/
+*.log
+.venv/
+# data-collection code stays private
+bcci_commentary.py
+ca_commentary.py
+cricsheet_ipl.py
+daily.sh

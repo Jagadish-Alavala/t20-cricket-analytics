@@ -1,0 +1,44 @@
+{
+  "train": "all leagues 2020-2023",
+  "test": "2024",
+  "model1_expected_runs": {
+    "overall_MAE": 18.81,
+    "naive_MAE": 28.22,
+    "by_bucket": [
+      {
+        "bucket": "0-30",
+        "model_MAE": 28.0,
+        "naive_MAE": 58.45,
+        "n": 10882.0
+      },
+      {
+        "bucket": "30-60",
+        "model_MAE": 22.63,
+        "naive_MAE": 26.6,
+        "n": 10702.0
+      },
+      {
+        "bucket": "60-90",
+        "model_MAE": 16.02,
+        "naive_MAE": 18.35,
+        "n": 10717.0
+      },
+      {
+        "bucket": "90-120",
+        "model_MAE": 8.23,
+        "naive_MAE": 8.56,
+        "n": 10475.0
+      }
+    ]
+  },
+  "model2_win_prob": {
+    "ml_logloss": 0.582,
+    "ml_brier": 0.197,
+    "ml_auc": 0.767,
+    "dl_law_auc": 0.857,
+    "dl_law_brier": 0.156,
+    "corr_provider_wprob": 0.706,
+    "verdict": "DL power-law beats ML classifier on AUC and Brier; WPA uses DL WP in v0",
+    "wpa_currency": "DL power-law win probability"
+  }
+}
