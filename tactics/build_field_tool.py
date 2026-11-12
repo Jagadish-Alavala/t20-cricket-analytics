@@ -64,17 +64,17 @@ const CX=260, CY=270, R=190;
 function P2(a,f){a=a*Math.PI/180;return [CX+Math.sin(a)*f*R, CY-Math.cos(a)*f*R];}
 function draw(name){
  const p=P[name], mir=(p.hand==="LHB")?-1:1, w=p.wagon, mx=Math.max(...Object.values(w));
- let s=`<circle cx=${CX} cy=${CY} r=${R} fill="#0f1620" stroke="#fff" stroke-width=3/>`;
+ let s=`<circle cx=${CX} cy=${CY} r=${R} fill="#0f1620" stroke="#fff" stroke-width=3 />`;
  for(let z=1;z<=8;z++){const a=ZA[z]*mir,a0=(a-22.5)*Math.PI/180,a1=(a+22.5)*Math.PI/180;
    const x0=CX+Math.sin(a0)*R,y0=CY-Math.cos(a0)*R,x1=CX+Math.sin(a1)*R,y1=CY-Math.cos(a1)*R;
-   s+=`<path d="M${CX} ${CY} L${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z" fill="#f2b807" opacity=${(0.05+w[z]/mx*0.5).toFixed(2)}/>`;}
- for(let k=0;k<8;k++){const t=k*45*Math.PI/180;s+=`<line x1=${CX} y1=${CY} x2=${(CX+Math.sin(t)*R).toFixed(1)} y2=${(CY-Math.cos(t)*R).toFixed(1)} stroke="#fff" stroke-width=1 opacity=.35/>`;}
- s+=`<circle cx=${CX} cy=${CY} r=${R*0.55} fill="none" stroke="#fff" stroke-width=1 stroke-dasharray="4 4" opacity=.32/>`;
+   s+=`<path d="M${CX} ${CY} L${x0.toFixed(1)} ${y0.toFixed(1)} A${R} ${R} 0 0 1 ${x1.toFixed(1)} ${y1.toFixed(1)} Z" fill="#f2b807" opacity=${(0.05+w[z]/mx*0.5).toFixed(2)} />`;}
+ for(let k=0;k<8;k++){const t=k*45*Math.PI/180;s+=`<line x1=${CX} y1=${CY} x2=${(CX+Math.sin(t)*R).toFixed(1)} y2=${(CY-Math.cos(t)*R).toFixed(1)} stroke="#fff" stroke-width=1 opacity=.35 />`;}
+ s+=`<circle cx=${CX} cy=${CY} r=${R*0.55} fill="none" stroke="#fff" stroke-width=1 stroke-dasharray="4 4" opacity=.32 />`;
  // OUTSIDE labels: zone name + run%
  for(let z=1;z<=8;z++){const[x,y]=P2(ZA[z]*mir,1.17);
    s+=`<text x=${x.toFixed(0)} y=${(y-3).toFixed(0)} font-size=11 fill="#fff" text-anchor="middle">${ZN[z]}</text>`;
    s+=`<text x=${x.toFixed(0)} y=${(y+11).toFixed(0)} font-size=11 font-weight=700 fill="#ffd23f" text-anchor="middle">${w[z]}%</text>`;}
- s+=`<rect x=${CX-10} y=${CY-36} width=20 height=72 rx=2 fill="#c9a86a" opacity=.9/>`;
+ s+=`<rect x=${CX-10} y=${CY-36} width=20 height=72 rx=2 fill="#c9a86a" opacity=.9 />`;
  // keeper + bowler inside 30y ring
  const kp=P2(0,0.40), bw=P2(180,0.40);
  s+=`<circle cx=${CX} cy=${(CY+0.40*R).toFixed(0)} r=9 fill="#e2e8f0"/><text x=${CX} y=${(CY+0.40*R+3.5).toFixed(0)} font-size=8.5 font-weight=700 fill="#0d1a2b" text-anchor="middle">WK</text>`;
@@ -89,8 +89,8 @@ function draw(name){
  if(document.getElementById("showOuts").checked && p.outs){
    for(let z=1;z<=8;z++){const n=p.outs[z]||0;
      for(let i=0;i<n;i++){const aj=ZA[z]*mir + (((i*67+z*31)%35)-17); const rf=0.44+(((i*53+z*19)%50)/100);
-       const[x,y]=P2(aj,rf); s+=`<circle cx=${x.toFixed(1)} cy=${y.toFixed(1)} r=3.2 fill="#ff6b6b" stroke="#fff" stroke-width=0.4 opacity=0.85/>`;}}}
- F.forEach(f=>{const[x,y]=P2(f.a,f.f);s+=`<circle cx=${x.toFixed(0)} cy=${y.toFixed(0)} r=9 fill=${f.c} stroke="#0d1a2b" stroke-width=1.5/>`;});
+       const[x,y]=P2(aj,rf); s+=`<circle cx=${x.toFixed(1)} cy=${y.toFixed(1)} r=3.2 fill="#ff6b6b" stroke="#fff" stroke-width=0.4 opacity=0.85 />`;}}}
+ F.forEach(f=>{const[x,y]=P2(f.a,f.f);s+=`<circle cx=${x.toFixed(0)} cy=${y.toFixed(0)} r=9 fill=${f.c} stroke="#0d1a2b" stroke-width=1.5 />`;});
  document.getElementById("fld").innerHTML=s;
  document.getElementById("hand").textContent=p.hand;
  document.getElementById("plan").innerHTML=`<b style="color:#f2b807">Bowling plan</b> &nbsp; vs pace: <span style="color:#fca5a5">${p.plan_pace}</span><br>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; vs spin: <span style="color:#fca5a5">${p.plan_spin}</span>`;

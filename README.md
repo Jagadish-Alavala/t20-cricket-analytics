@@ -6,6 +6,25 @@ Two datasets feed it:
 - **Tactics data:** about 459,000 deliveries with line, length, shot and control tags, IPL plus seven leagues, 2020–2024.
 - **Metrics data:** 5,123 men's T20 matches, 1.1 million deliveries, IPL 2008–2026, plus internationals, SMAT, T20 Blast, BBL, CPL and other leagues.
 
+## The app
+
+```bash
+pip install -r requirements.txt
+streamlit run app/streamlit_app.py
+```
+
+The app runs on the derived tables in `outputs/` and `app/data/`, so it needs no raw data. You can also deploy it as is on Streamlit Community Cloud, with `app/streamlit_app.py` as the entry point.
+
+| Page | For | What it does |
+|---|---|---|
+| 🎯 Plan for a batter | Coach | Weak phases, lengths, lines and bowling styles, the plan in plain words, and the interactive field plan |
+| 🎳 Use a bowler | Coach | Phase usage and length mix, plus the batters to bowl him at and the ones to keep him away from |
+| 📋 Who bats next | Coach, captain | Set the over, the situation and the bowlers left; it ranks the batters to come and names who each should target |
+| 💰 Player value | Franchise | WPA, RAA, WAA and Impact for every player-season in 11 leagues, with filters and an efficiency-against-volume chart |
+| ⚖️ Compare players | Franchise, auction | Career totals and season-by-season value for up to five players |
+| 🔄 Impact Player rule | Franchise, analyst | The rule study: totals by league, role changes with 95% ranges, and the full story |
+| 🔬 Methods and checks | Analyst | Model tests, comparison with the reference tables, honesty notes |
+
 ## Start here (no code needed)
 
 | You are… | Open |
@@ -29,7 +48,8 @@ Two datasets feed it:
 ```
 core/          shared loader, match-state features, expected runs, DL resource, phase par
 tactics/       match-day decisions: matchups, field plans, entry points, batting order
-scouting_app/  Streamlit scouting app and the RAAR model behind it
+app/           the Streamlit app (match day, player value, research)
+scouting_app/  ball-level scouting app and the RAAR model behind it
 metrics/       contextual player value (par, Impact, RAA/WAA, WPA) and the Impact Player study
 player_value/  which impact metrics hold up: validity and repeatability tests
 stories/       written-up studies
