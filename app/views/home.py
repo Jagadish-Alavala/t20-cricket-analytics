@@ -13,6 +13,7 @@ with c1:
         st.write("How do we bowl to him? Where do the fielders go? Who walks in next?")
         if (Path(__file__).parents[1] / "data" / "balls.parquet").exists():
             st.page_link("views/batter_explorer.py", label="Batter explorer", icon="🔎")
+            st.page_link("views/bowler_explorer.py", label="Bowler explorer", icon="🌀")
         st.page_link("views/batter_plan.py", label="Plan for a batter", icon="🎯")
         st.page_link("views/bowler_plan.py", label="Use a bowler", icon="🎳")
         st.page_link("views/batting_order.py", label="Who bats next", icon="📋")

@@ -140,3 +140,63 @@ def tiles(items, min_w=120):
         for label, value, sub, colour, tip in items)
     st.markdown(f"<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax({min_w}px,1fr));gap:8px;"
                 f"margin:4px 0 12px'>{cells}</div>", unsafe_allow_html=True)
+
+
+# ---------------------------------------------------------------- explorer helpers (batter and bowler pages)
+LENGTHS = ["Full toss", "Yorker", "Full", "Good", "Back of length", "Short"]
+LINES = ["Wide off", "Outside off", "Stumps", "Leg", "Wide leg"]
+SECTORS = ["Third man", "Point", "Cover", "Long off", "Long on", "Mid wicket", "Square leg", "Fine leg"]
+VARIATIONS = ["Stock", "Swing/seam in", "Swing/seam away", "Reverse swing", "Slower ball", "Cutter", "Quicker ball",
+              "Googly", "Arm ball", "Top spinner", "Slider/flipper", "Carrom ball", "Doosra"]
+EXPLORER_PHASES = {"PP": "Powerplay (1-6)", "Mid1": "Middle 1 (7-11)", "Mid2": "Middle 2 (12-16)", "Slog": "Slog (17-20)"}
+
+
+def ordinal(n):
+    return f"{n}{'th' if 10 <= n % 100 <= 20 else {1: 'st', 2: 'nd', 3: 'rd'}.get(n % 10, 'th')}"
+
+
+def rank_tiles(field, who, cols, label):
+    """Rank `who` in `field` (one row per player, higher is better) on each (name, column) pair."""
+    import numpy as np  # noqa: F401
+    items = []
+    for k, col in cols:
+        rk = int(field[col].rank(ascending=False, method="min")[who])
+        pct = round(100 * (1 - (rk - 1) / len(field)))
+        items.append((f"{k} per ball", f"#{rk}", f"of {len(field):,} · {ordinal(pct)} percentile",
+                      "#4ade80" if pct >= 75 else "#fbbf24" if pct >= 40 else "#f87171", None))
+    st.markdown(f"**Rankings** among the {len(field):,} {label} under the same filters")
+    tiles(items, min_w=170)
+
+
+def heatmap(cells, metric, fmt, mid, good_high=True, height=330, scheme=None):
+    """Line x length grid. cells: one row per (length, line) with the metric column; red = good for the batter."""
+    import altair as alt
+    scale = alt.Scale(scheme=scheme) if scheme else alt.Scale(scheme="redblue", reverse=good_high, domainMid=mid)
+    base = alt.Chart(cells).encode(x=alt.X("line:N", sort=LINES, title=None, axis=alt.Axis(orient="top", labelAngle=0, labelLimit=0, labelOverlap=False, labelFontSize=11)),
+                                   y=alt.Y("length:N", sort=LENGTHS, title=None))
+    tips = [c for c in cells.columns if c not in ("length", "line")]
+    st.altair_chart((base.mark_rect().encode(color=alt.Color(f"{metric}:Q", scale=scale), tooltip=["length", "line"] + tips)
+                     + base.mark_text(fontSize=13, fontWeight="bold").encode(text=alt.Text(f"{metric}:Q", format=fmt),
+                                                                             color=alt.value("#0b1622")))
+                    .properties(height=height), width="stretch")
+
+
+def wheel(z, left_handed, title=None):
+    """Runs by scoring sector, seen from behind the batter with the bowler at the top."""
+    import altair as alt
+    import numpy as np
+    g = z.groupby("zone", observed=True).agg(balls=("bat_runs", "size"), runs=("bat_runs", "sum"),
+                                             outs=("out", "sum")).reindex(SECTORS).fillna(0).reset_index()
+    g["share"] = 100 * g.runs / max(g.runs.sum(), 1)
+    order = SECTORS if left_handed else SECTORS[::-1]  # a right-hander's off side is on the right
+    g["theta0"] = (g.zone.map({s: i for i, s in enumerate(order)}) * 45 - 180) * np.pi / 180
+    g["theta1"], g["mid"] = g.theta0 + np.pi / 4, g.theta0 + np.pi / 8
+    g["label"] = g.zone.astype(str) + " " + g.share.round(0).astype(int).astype(str) + "%"
+    base = alt.Chart(g).properties(width=340, height=340, title=title or "")
+    arcs = base.mark_arc(innerRadius=38, outerRadius=130, stroke="#0b1622", strokeWidth=2).encode(
+        theta=alt.Theta("theta0:Q", scale=None), theta2="theta1:Q",
+        color=alt.Color("share:Q", scale=alt.Scale(scheme="goldorange"), legend=None),
+        tooltip=["zone", "runs", alt.Tooltip("share:Q", format=".1f", title="% of runs"), "balls", "outs"])
+    text = base.mark_text(radius=152, fontSize=11, color="#e5e7eb").encode(theta=alt.Theta("mid:Q", scale=None), text="label:N")
+    st.altair_chart(arcs + text, width="content")
+    return g

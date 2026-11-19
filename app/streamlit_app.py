@@ -20,5 +20,6 @@ pages = {
     ],
 }
 if (Path(__file__).parent / "data" / "balls.parquet").exists():  # per-ball data stays local, not in the repo
-    pages["Match day"].insert(0, st.Page("views/batter_explorer.py", title="Batter explorer", icon="🔎"))
+    pages["Match day"][:0] = [st.Page("views/batter_explorer.py", title="Batter explorer", icon="🔎"),
+                              st.Page("views/bowler_explorer.py", title="Bowler explorer", icon="🌀")]
 st.navigation(pages).run()
