@@ -17,7 +17,7 @@ The app runs on the derived tables in `outputs/` and `app/data/`, so it needs no
 
 | Page | For | What it does |
 |---|---|---|
-| 🔎 Batter explorer | Coach, analyst | Filter any batter by league, years, pace or spin, bowler type, length, line, innings, phase, entry over and venue. Shows the stat strip, RAA/WAA/Impact/WPA per ball with rankings against the same filters, a profile, a line × length heatmap and a wagon wheel. Needs the local ball-by-ball table (`metrics/ball_tags.py`) |
+| 🔎 Batter explorer | Coach, analyst | Filter any batter by league, years, pace or spin, bowler type, length, line, innings, phase, entry over and venue. Shows the stat strip, RAA/WAA/Impact/WPA per ball with rankings against the same filters, a profile, a line × length heatmap and a wagon wheel. Local only: it appears when `app/data/balls.parquet` exists (build it with `metrics/ball_tags.py`), so the hosted app doesn't show it |
 | 🎯 Plan for a batter | Coach | Weak phases, lengths, lines and bowling styles, the plan in plain words, and the interactive field plan |
 | 🎳 Use a bowler | Coach | Phase usage and length mix, plus the batters to bowl him at and the ones to keep him away from |
 | 📋 Who bats next | Coach, captain | Set the over, the situation and the bowlers left; it ranks the batters to come and names who each should target |

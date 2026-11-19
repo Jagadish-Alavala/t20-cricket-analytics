@@ -1,3 +1,4 @@
+from pathlib import Path
 import streamlit as st
 
 st.set_page_config(page_title="T20 Cricket Analytics", page_icon="🏏", layout="wide")
@@ -5,7 +6,6 @@ st.set_page_config(page_title="T20 Cricket Analytics", page_icon="🏏", layout=
 pages = {
     "": [st.Page("views/home.py", title="Home", icon="🏠", default=True)],
     "Match day": [
-        st.Page("views/batter_explorer.py", title="Batter explorer", icon="🔎"),
         st.Page("views/batter_plan.py", title="Plan for a batter", icon="🎯"),
         st.Page("views/bowler_plan.py", title="Use a bowler", icon="🎳"),
         st.Page("views/batting_order.py", title="Who bats next", icon="📋"),
@@ -19,4 +19,6 @@ pages = {
         st.Page("views/methods.py", title="Methods and checks", icon="🔬"),
     ],
 }
+if (Path(__file__).parent / "data" / "balls.parquet").exists():  # per-ball data stays local, not in the repo
+    pages["Match day"].insert(0, st.Page("views/batter_explorer.py", title="Batter explorer", icon="🔎"))
 st.navigation(pages).run()

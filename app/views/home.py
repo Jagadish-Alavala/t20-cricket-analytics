@@ -1,3 +1,4 @@
+from pathlib import Path
 import streamlit as st
 from lib import data, footer
 
@@ -10,7 +11,8 @@ with c1:
     with st.container(border=True):
         st.markdown("### 🎯 Coach")
         st.write("How do we bowl to him? Where do the fielders go? Who walks in next?")
-        st.page_link("views/batter_explorer.py", label="Batter explorer", icon="🔎")
+        if (Path(__file__).parents[1] / "data" / "balls.parquet").exists():
+            st.page_link("views/batter_explorer.py", label="Batter explorer", icon="🔎")
         st.page_link("views/batter_plan.py", label="Plan for a batter", icon="🎯")
         st.page_link("views/bowler_plan.py", label="Use a bowler", icon="🎳")
         st.page_link("views/batting_order.py", label="Who bats next", icon="📋")
