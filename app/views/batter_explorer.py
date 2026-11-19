@@ -2,7 +2,7 @@ import altair as alt
 import numpy as np
 import pandas as pd
 import streamlit as st
-from lib import (balls, footer, tiles, rank_tiles, heatmap, wheel, LENGTHS, LINES, VARIATIONS,
+from lib import (balls, footer, tiles, rank_tiles, heatmap, wheel, header, signed, PACE_SPIN, BLUE, LENGTHS, LINES, VARIATIONS,
                  EXPLORER_PHASES as PHASE_LBL)
 
 DEF = {
@@ -17,7 +17,8 @@ CTRL_HELP = ("Share of balls the batter was in control of: not edged, beaten, mi
              "BCCI commentary doesn't record it, so it shows – for IPL and SMAT.")
 MIN_FIELD = 40
 
-st.title("🔎 Batter explorer")
+header("Batter explorer", "Any batter, any filter: what he scores, how he gets out, and what that is worth in the "
+       "match situation. Filters are in the sidebar; press Apply.", eyebrow="Explorers")
 d = balls()
 if d is None:
     st.info("This page needs the ball-by-ball table. Build it with `python metrics/ball_tags.py`, then reload.")
@@ -71,7 +72,7 @@ def summary(x):
 
 
 fmt = lambda v, p=1: "–" if pd.isna(v) else f"{v:,.{p}f}" if isinstance(v, (float, np.floating)) else f"{v:,}"
-pos = lambda v: "#4ade80" if v > 0 else "#f87171" if v < 0 else None
+pos = signed
 hand = me.bat_hand.dropna().mode()
 lhb = bool(len(hand)) and hand.iloc[0] == "Left"
 chosen = [", ".join(lg) or "All leagues", f"{yrs[0]}–{yrs[1]}"] + [", ".join(map(str, s)) for s in
@@ -80,8 +81,8 @@ st.markdown(f"**{bat}** · {(hand.iloc[0] + '-hand bat') if len(hand) else ''} �
             f"**{len(me):,} balls in view**")
 
 nd = {"Runs": 0, "Balls": 0, "Dismissals": 0, "4:6 ratio": 2}
-tiles([(k, fmt(v, nd.get(k, 1)), "", "#a78bfa" if k in ("Strike rate", "Control %") else None,
-        CTRL_HELP if k == "Control %" else None) for k, v in summary(me).items()], min_w=105)
+tiles([(k, fmt(v, nd.get(k, 1)), "", None, CTRL_HELP if k == "Control %" else None)
+       for k, v in summary(me).items()], min_w=130, cols=5)
 tiles([(f"{k} per ball", f"{me[c].sum() / len(me):+.3f}", f"{me[c].sum():+.1f} total · {len(me):,} balls",
         pos(me[c].sum()), DEF[k]) for k, c in [("RAA", "raa"), ("WAA", "waa"), ("Impact", "impact"), ("WPA", "wpa")]],
       min_w=170)
@@ -109,7 +110,7 @@ def zone_table(x, col, order=None):
     t["Average"] = t.Runs / t.Outs.replace(0, np.nan)
     t["Balls/dis"] = t.Balls / t.Outs.replace(0, np.nan)
     cols = ["% of balls", "SR", "Average", "Balls/dis", "RAA/ball", "4s", "6s", "Outs", "Balls"]
-    return t[(["Control %"] if x.ctrl.notna().mean() >= 0.5 else []) + cols]
+    return t[(["Control %"] if x.ctrl.notna().mean() >= 0.5 else []) + cols].rename_axis(col.capitalize())
 
 
 NUM = {c: st.column_config.NumberColumn(format="%.1f") for c in ["Control %", "SR", "Average", "Balls/dis", "% of balls"]}
@@ -125,8 +126,8 @@ with tab_p:
     first5 = p[p.ball_no <= 5].groupby("kind", observed=True).raa.mean()
     entry_over = (p.groupby(["match_id", "innings"], observed=True).entry_ball.first() - 1) // 6 + 1
     tiles([("RAA per ball", f"{p.raa.mean():+.3f}", f"{p.raa.sum():+.1f} total · {len(p):,} balls", pos(p.raa.mean()), DEF["RAA"]),
-           ("First 5 balls · RAA vs pace", f"{first5.get('pace', np.nan):+.3f}", "mean per ball", "#38bdf8", None),
-           ("First 5 balls · RAA vs spin", f"{first5.get('spin', np.nan):+.3f}", "mean per ball", "#f59e0b", None),
+           ("First 5 balls · RAA vs pace", f"{first5.get('pace', np.nan):+.3f}", "mean per ball", signed(first5.get('pace', 0)), None),
+           ("First 5 balls · RAA vs spin", f"{first5.get('spin', np.nan):+.3f}", "mean per ball", signed(first5.get('spin', 0)), None),
            ("Usual entry", f"Over {entry_over.median():.0f}", "median", None, None),
            ("Innings", f"{len(entry_over):,}", "", None, None)], min_w=150)
 
@@ -137,19 +138,19 @@ with tab_p:
         g = g[g["size"] >= 10]
         st.altair_chart(alt.Chart(g).mark_line(point=True).encode(
             x=alt.X("ball_no:Q", title="Ball of his innings"), y=alt.Y("mean:Q", title="Mean RAA"),
-            color=alt.Color("kind:N", scale=alt.Scale(domain=["pace", "spin"], range=["#38bdf8", "#f59e0b"]), title=None),
+            color=alt.Color("kind:N", scale=alt.Scale(**PACE_SPIN), title=None, legend=alt.Legend(orient="top")),
             tooltip=["ball_no", "kind", alt.Tooltip("mean:Q", format="+.3f"), alt.Tooltip("size:Q", title="balls")]),
             width="stretch")
     with b:
         st.markdown("**Entry points**: over he came in")
         eo = entry_over.value_counts().sort_index().rename_axis("over").reset_index(name="innings")
-        st.altair_chart(alt.Chart(eo).mark_bar(color="#22c55e").encode(
+        st.altair_chart(alt.Chart(eo).mark_bar(color=BLUE, cornerRadiusEnd=4).encode(
             x=alt.X("over:O", title="Over"), y=alt.Y("innings:Q"), tooltip=["over", "innings"]), width="stretch")
     with e:
-        st.markdown("**Impact trajectory**: expected impact after n balls")
+        st.markdown("**Impact trajectory**: impact after n balls")
         t = p[p.ball_no <= 60].groupby("ball_no").impact.agg(["mean", "size"])
         t = t[t["size"] >= 10].assign(cum=lambda x: x["mean"].cumsum()).reset_index()
-        st.altair_chart(alt.Chart(t).mark_area(line={"color": "#ef4444"}, color="#ef444433").encode(
+        st.altair_chart(alt.Chart(t).mark_area(line={"color": BLUE, "strokeWidth": 2}, color=BLUE, opacity=.18).encode(
             x=alt.X("ball_no:Q", title="Balls faced"), y=alt.Y("cum:Q", title="Cumulative impact"),
             tooltip=["ball_no", alt.Tooltip("cum:Q", format="+.2f"), alt.Tooltip("size:Q", title="innings")]),
             width="stretch")
@@ -157,7 +158,7 @@ with tab_p:
     ph = p.groupby("phase", observed=True).agg(Balls=("bat_runs", "size"), runs=("bat_runs", "sum"),
                                                 raa=("raa", "mean"), impact=("impact", "mean"))
     ph = ph.reindex(list(PHASE_LBL)).dropna(how="all")
-    ph.index = ph.index.map(PHASE_LBL)
+    ph.index = ph.index.map(PHASE_LBL).rename("Phase")
     ph.insert(1, "SR", 100 * ph.runs / ph.Balls)
     st.markdown("**By phase**")
     st.dataframe(ph.drop(columns="runs").rename(columns={"raa": "RAA/ball", "impact": "Impact/ball"}), width="stretch",
@@ -193,20 +194,20 @@ with tab_sh:
     if len(sh):
         t = zone_table(sh, "shot")
         air = sh.groupby("shot", observed=True).aerial.mean()
-        if air.notna().any():
+        if sh.aerial.notna().mean() >= 0.5:  # only when recorded for most balls in view (CA data)
             t.insert(0, "In the air %", 100 * air)
         st.markdown("**By shot**")
         st.dataframe(t, width="stretch", column_config=NUM)
         pts = t.reset_index().dropna(subset=["Balls/dis"])
         pts = pts[pts.Balls >= 10]
         if len(pts):
-            st.altair_chart(alt.Chart(pts).mark_circle(opacity=.8, color="#a78bfa").encode(
-                x=alt.X("SR:Q", title="Strike rate"), y=alt.Y("Balls/dis:Q", title="Balls per dismissal (higher = safer)"),
+            st.altair_chart(alt.Chart(pts).mark_circle(opacity=.8, color=BLUE).encode(
+                x=alt.X("SR:Q", title="Strike rate", scale=alt.Scale(padding=40)), y=alt.Y("Balls/dis:Q", title="Balls per dismissal (higher = safer)", scale=alt.Scale(padding=16)),
                 size=alt.Size("Balls:Q", legend=None),
-                tooltip=["shot", "Balls", alt.Tooltip("SR:Q", format=".0f"), alt.Tooltip("Balls/dis:Q", format=".0f"),
+                tooltip=["Shot", "Balls", alt.Tooltip("SR:Q", format=".0f"), alt.Tooltip("Balls/dis:Q", format=".0f"),
                          alt.Tooltip("RAA/ball:Q", format="+.3f")])
-                            + alt.Chart(pts).mark_text(dy=-12, color="#e5e7eb", fontSize=11).encode(
-                                x="SR:Q", y="Balls/dis:Q", text="shot:N"), width="stretch")
+                            + alt.Chart(pts).mark_text(dy=-12, color="#c3c2b7", fontSize=11).encode(
+                                x="SR:Q", y="Balls/dis:Q", text="Shot:N"), width="stretch")
             st.caption("Risk against reward: right is faster scoring, up is safer. Shots with 10+ balls and at least one dismissal.")
     a, b = st.columns(2)
     with a:
@@ -219,7 +220,7 @@ with tab_sh:
         dis = me[me.out == 1].dismissal.value_counts().rename_axis("How").reset_index(name="Dismissals")
         dis = dis[dis.Dismissals > 0]
         if len(dis):
-            st.altair_chart(alt.Chart(dis).mark_bar(color="#f87171").encode(
+            st.altair_chart(alt.Chart(dis).mark_bar(color=BLUE, cornerRadiusEnd=4).encode(
                 y=alt.Y("How:N", sort="-x", title=None), x="Dismissals:Q", tooltip=["How", "Dismissals"]), width="stretch")
         st.caption(f"{int(me.out.sum() - dis.Dismissals.sum())} dismissals without a recorded type.")
 

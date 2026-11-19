@@ -1,10 +1,31 @@
+# One visual system for the whole app. Colours follow a validated dark palette:
+# categorical order passes colour-blind separation checks; blue is the single sequential hue;
+# diverging runs blue (good for the bowler) through grey to red (good for the batter).
 [theme]
 base = "dark"
-primaryColor = "#22c55e"
-backgroundColor = "#0b1622"
-secondaryBackgroundColor = "#13263a"
-textColor = "#e5e7eb"
-font = "sans serif"
+primaryColor = "#3987e5"
+backgroundColor = "#121211"
+secondaryBackgroundColor = "#1a1a19"
+textColor = "#f0efec"
+linkColor = "#86b6ef"
+font = "system-ui, -apple-system, 'Segoe UI', sans-serif"
+headingFont = "system-ui, -apple-system, 'Segoe UI', sans-serif"
+headingFontWeights = [700, 650, 600]
+baseRadius = "0.6rem"
+borderColor = "#2c2c2a"
+dataframeBorderColor = "#2c2c2a"
+dataframeHeaderBackgroundColor = "#1a1a19"
+showSidebarBorder = true
+chartCategoricalColors = ["#3987e5", "#d95926", "#199e70", "#c98500", "#d55181", "#008300", "#9085e9", "#e66767"]
+chartSequentialColors = ["#0d366b", "#104281", "#184f95", "#1c5cab", "#256abf", "#2a78d6", "#3987e5", "#5598e7", "#6da7ec", "#86b6ef"]
+chartDivergingColors = ["#2a78d6", "#3987e5", "#5598e7", "#86b6ef", "#383835", "#f0a3a3", "#e88080", "#e66767", "#d03b3b"]
+
+[theme.sidebar]
+backgroundColor = "#161615"
+secondaryBackgroundColor = "#1f1f1d"
+
+[client]
+toolbarMode = "minimal"
 
 [server]
 headless = true

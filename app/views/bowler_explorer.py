@@ -2,7 +2,7 @@ import altair as alt
 import numpy as np
 import pandas as pd
 import streamlit as st
-from lib import (balls, footer, tiles, rank_tiles, heatmap, wheel, LENGTHS, LINES, VARIATIONS,
+from lib import (balls, footer, tiles, rank_tiles, heatmap, wheel, header, signed, PACE_SPIN, BLUE, LENGTHS, LINES, VARIATIONS,
                  EXPLORER_PHASES as PHASE_LBL)
 
 DEF = {
@@ -15,7 +15,8 @@ FS_HELP = ("Share of balls where the batter played a false shot: edged, beaten, 
            "ball by ball only in Cricket Australia's data (T20 Blast, some T20Is); shows – elsewhere.")
 MIN_FIELD = 60
 
-st.title("🎳 Bowler explorer")
+header("Bowler explorer", "Any bowler, any filter: where he lands it, what he mixes in, how he takes wickets, and "
+       "what that is worth in the match situation. Filters are in the sidebar; press Apply.", eyebrow="Explorers")
 d = balls()
 if d is None:
     st.info("This page needs the ball-by-ball table. Build it with `python metrics/ball_tags.py`, then reload.")
@@ -69,7 +70,7 @@ def summary(x):
 
 fmt = lambda v, p=1: v if isinstance(v, str) else "–" if pd.isna(v) else \
     f"{v:,.{p}f}" if isinstance(v, (float, np.floating)) else f"{v:,}"
-pos = lambda v: "#4ade80" if v > 0 else "#f87171" if v < 0 else None
+pos = signed
 kind = me.kind.dropna().mode()
 style = me["style"].dropna().mode()
 chosen = [", ".join(lg) or "All leagues", f"{yrs[0]}–{yrs[1]}"] + [", ".join(map(str, s)) for s in
@@ -79,8 +80,8 @@ if hand and len(hand) < 2:
 st.markdown(f"**{bow}** · {style.iloc[0] if len(style) else ''} · {' · '.join(chosen)} · **{len(me):,} balls in view**")
 
 nd = {"Runs": 0, "Wickets": 0, "Wides": 0, "Economy": 2, "Average": 1, "Strike rate": 1}
-tiles([(k, fmt(v, nd.get(k, 1)), "", "#a78bfa" if k in ("Economy", "Wickets") else None,
-        FS_HELP if k == "False shot %" else None) for k, v in summary(me).items()], min_w=105)
+tiles([(k, fmt(v, nd.get(k, 1)), "", None, FS_HELP if k == "False shot %" else None)
+       for k, v in summary(me).items()], min_w=130, cols=5)
 tiles([(f"{k} per ball", f"{nw[c].sum() / max(len(nw), 1):+.3f}", f"{nw[c].sum():+.1f} total · {len(nw):,} balls",
         pos(nw[c].sum()), DEF[k]) for k, c in [("RAA", "b_raa"), ("WAA", "b_waa"), ("Impact", "b_impact"), ("WPA", "b_wpa")]],
       min_w=170)
@@ -108,7 +109,8 @@ def bowl_table(x, col, order=None):
     t["Economy"] = 6 * t.Runs / t.legal.replace(0, np.nan)
     t["Dot %"] = 100 * t.dots / t.legal.replace(0, np.nan)
     t["Balls/wkt"] = t.legal / t.Wkts.replace(0, np.nan)
-    return t[["% of balls", "Economy", "Dot %", "Wkts", "Balls/wkt", "RAA saved/ball", "Balls"]]
+    return t[["% of balls", "Economy", "Dot %", "Wkts", "Balls/wkt", "RAA saved/ball", "Balls"]].rename_axis(
+        {"bat_hand": "Batter", "phase": "Phase"}.get(col, col.capitalize()))
 
 
 NUM = {c: st.column_config.NumberColumn(format="%.1f") for c in ["% of balls", "Dot %", "Balls/wkt"]}
@@ -135,23 +137,24 @@ with tab_p:
     with a:
         st.markdown("**When he bowls**: share of his balls by over")
         u = (100 * over.value_counts(normalize=True)).sort_index().rename_axis("over").reset_index(name="pct")
-        st.altair_chart(alt.Chart(u).mark_bar(color="#22c55e").encode(
+        st.altair_chart(alt.Chart(u).mark_bar(color=BLUE, cornerRadiusEnd=4).encode(
             x=alt.X("over:O", title="Over"), y=alt.Y("pct:Q", title="% of balls"),
             tooltip=["over", alt.Tooltip("pct:Q", format=".1f")]), width="stretch")
     with b:
         st.markdown("**Economy by over** (overs with 30+ balls)")
         e = p.assign(over=over).groupby("over").agg(runs=("conceded", "sum"), legal=("legal", "sum"))
         e = e[e.legal >= 30].assign(econ=lambda x: 6 * x.runs / x.legal).reset_index()
-        st.altair_chart(alt.Chart(e).mark_line(point=True, color="#f59e0b").encode(
+        st.altair_chart(alt.Chart(e).mark_line(point=True, color=BLUE).encode(
             x=alt.X("over:O", title="Over"), y=alt.Y("econ:Q", title="Economy", scale=alt.Scale(zero=False)),
             tooltip=["over", alt.Tooltip("econ:Q", format=".2f"), "legal"]), width="stretch")
 
     st.markdown("**By phase**")
     ph = bowl_table(p, "phase", list(PHASE_LBL))
-    ph.index = ph.index.map(PHASE_LBL)
+    ph.index = ph.index.map(PHASE_LBL).rename("Phase")
     st.dataframe(ph, width="stretch", column_config=NUM)
     st.markdown("**Against right- and left-handers**")
-    st.dataframe(bowl_table(p.dropna(subset=["bat_hand"]), "bat_hand"), width="stretch", column_config=NUM)
+    st.dataframe(bowl_table(p.dropna(subset=["bat_hand"]), "bat_hand").rename(index=lambda h: f"{h}-handers"),
+                 width="stretch", column_config=NUM)
 
 # ---------------------------------------------------------------- lines and lengths
 with tab_ll:
@@ -170,7 +173,7 @@ with tab_ll:
             g = g[g.balls >= 5]
         cells = g.drop(columns=["runs", "legal", "raa"])
         if metric == "% of his balls":
-            heatmap(cells, metric, ".1f", None, scheme="greens")
+            heatmap(cells, metric, ".1f", None, sequential=True)
             st.caption("Where he lands it: darker means more of his deliveries.")
         else:
             mid = {"Economy": float(6 * tagged.conceded.sum() / max(tagged.legal.sum(), 1)), "Wicket %": float(
@@ -191,13 +194,13 @@ with tab_v:
         st.markdown("**His deliveries**")
         st.dataframe(t, width="stretch", column_config=NUM)
         pts = t.reset_index()
-        st.altair_chart(alt.Chart(pts[pts.Balls >= 12]).mark_circle(opacity=.85, color="#38bdf8").encode(
-            x=alt.X("% of balls:Q", title="% of his balls"), y=alt.Y("Economy:Q", scale=alt.Scale(zero=False)),
+        st.altair_chart(alt.Chart(pts[pts.Balls >= 12]).mark_circle(opacity=.85, color=BLUE).encode(
+            x=alt.X("% of balls:Q", title="% of his balls", scale=alt.Scale(padding=30)), y=alt.Y("Economy:Q", scale=alt.Scale(zero=False, padding=16)),
             size=alt.Size("Wkts:Q", legend=None),
-            tooltip=["variation", alt.Tooltip("% of balls:Q", format=".1f"), alt.Tooltip("Economy:Q", format=".2f"),
+            tooltip=["Variation", alt.Tooltip("% of balls:Q", format=".1f"), alt.Tooltip("Economy:Q", format=".2f"),
                      "Wkts", alt.Tooltip("RAA saved/ball:Q", format="+.3f")])
-                        + alt.Chart(pts[pts.Balls >= 12]).mark_text(dy=-12, color="#e5e7eb", fontSize=11).encode(
-                            x="% of balls:Q", y="Economy:Q", text="variation:N"), width="stretch")
+                        + alt.Chart(pts[pts.Balls >= 12]).mark_text(dy=-12, color="#c3c2b7", fontSize=11).encode(
+                            x="% of balls:Q", y="Economy:Q", text="Variation:N"), width="stretch")
         st.caption("How often he uses each delivery against what it costs. Bigger circle = more wickets.")
     sh = me[(me.wide == 0)].dropna(subset=["shot"])
     if len(sh):
@@ -217,13 +220,13 @@ with tab_w:
         dis = me[me.bowler_wkt == 1].dismissal.value_counts().rename_axis("How").reset_index(name="Wickets")
         dis = dis[dis.Wickets > 0]
         if len(dis):
-            st.altair_chart(alt.Chart(dis).mark_bar(color="#38bdf8").encode(
+            st.altair_chart(alt.Chart(dis).mark_bar(color=BLUE, cornerRadiusEnd=4).encode(
                 y=alt.Y("How:N", sort="-x", title=None), x="Wickets:Q", tooltip=["How", "Wickets"]), width="stretch")
         st.caption(f"{int(me.bowler_wkt.sum() - dis.Wickets.sum())} wickets without a recorded type.")
     with b:
         st.markdown("**Wickets by length**")
         wl = me[me.bowler_wkt == 1].length.value_counts().reindex(LENGTHS).fillna(0).rename_axis("Length").reset_index(name="Wickets")
-        st.altair_chart(alt.Chart(wl).mark_bar(color="#a78bfa").encode(
+        st.altair_chart(alt.Chart(wl).mark_bar(color=BLUE, cornerRadiusEnd=4).encode(
             y=alt.Y("Length:N", sort=LENGTHS, title=None), x="Wickets:Q", tooltip=["Length", "Wickets"]), width="stretch")
     st.markdown("**Where batters score off him**")
     z = me[(me.wide == 0)].dropna(subset=["zone"])

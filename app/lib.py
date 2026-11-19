@@ -11,8 +11,49 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT, DATA = ROOT / "outputs", Path(__file__).parent / "data"
 PHASES = {"PP": "Powerplay (1-6)", "MID": "Middle (7-15)", "DEATH": "Death (16-20)"}
 PHASE_ORDER = list(PHASES)
-LENGTHS = ["YORKER", "FULL", "GOOD_LENGTH", "SHORT_OF_A_GOOD_LENGTH", "SHORT"]
+ZONE_LENGTHS = ["YORKER", "FULL", "GOOD_LENGTH", "SHORT_OF_A_GOOD_LENGTH", "SHORT"]  # tactics tables (2020-24 data)
 NICE = lambda s: str(s).replace("_", " ").title()
+
+# ---------------------------------------------------------------- one visual system (see .streamlit/config.toml)
+BLUE, ORANGE = "#3987e5", "#d95926"          # categorical slots 1-2: pace / spin, or series 1 / series 2
+INK, INK2, MUTED = "#f0efec", "#c3c2b7", "#898781"
+SURFACE, LINE_C, GRID = "#1a1a19", "#2c2c2a", "#383835"
+GOOD, WARN, BAD = "#0ca30c", "#fab219", "#d03b3b"   # status only (with a label), never a series colour
+PACE_SPIN = {"domain": ["pace", "spin"], "range": [BLUE, ORANGE]}
+SEQ = ["#0d366b", "#86b6ef"]                  # one-hue blue ramp for magnitudes
+DIV_MID = "#383835"                           # neutral grey midpoint for diverging scales
+
+CSS = f"""
+<style>
+.block-container {{padding-top: 2.2rem; padding-bottom: 3rem; max-width: 1280px;}}
+h1 {{font-size: 2.1rem !important; letter-spacing: -0.01em;}}
+.app-sub {{color: {INK2}; font-size: 1.02rem; margin: -0.6rem 0 1.2rem 0; max-width: 62rem;}}
+.app-eyebrow {{color: {MUTED}; font-size: .74rem; letter-spacing: .09em; text-transform: uppercase; margin-bottom: .2rem;}}
+.tiles {{display: grid; gap: 8px; margin: 4px 0 14px;}}
+.tile {{background: {SURFACE}; border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 10px 13px;}}
+.tile .l {{color: {MUTED}; font-size: .7rem; letter-spacing: .07em; text-transform: uppercase; line-height: 1.35;
+          min-height: 1.9em;}}
+.tile .v {{color: {INK}; font-size: 1.5rem; font-weight: 700; line-height: 1.3; white-space: nowrap;}}
+.tile .s {{color: {INK2}; font-size: .78rem; opacity: .85;}}
+.stTabs [data-baseweb="tab-list"] {{gap: 1.4rem;}}
+.stTabs [data-baseweb="tab"] {{font-weight: 600;}}
+[data-testid="stCaptionContainer"] {{color: {MUTED};}}
+</style>
+"""
+
+
+def style():
+    """Global CSS; called once from the entry point so every page shares it."""
+    st.markdown(CSS, unsafe_allow_html=True)
+
+
+def header(title, sub=None, eyebrow=None):
+    """Page title with an optional eyebrow and one-line subtitle."""
+    if eyebrow:
+        st.markdown(f"<div class='app-eyebrow'>{eyebrow}</div>", unsafe_allow_html=True)
+    st.title(title, anchor=False)
+    if sub:
+        st.markdown(f"<div class='app-sub'>{sub}</div>", unsafe_allow_html=True)
 
 
 @st.cache_data
@@ -128,18 +169,23 @@ def balls():
     return pd.read_parquet(p) if p.exists() else None
 
 
-def tiles(items, min_w=120):
-    """Responsive stat strip: items are (label, value, sub, colour, tooltip); tiles wrap instead of truncating."""
+def tiles(items, min_w=120, cols=None):
+    """Stat strip: items are (label, value, sub, colour, tooltip). `cols` fixes the count per row on wide
+    screens (it falls back to wrapping on narrow ones); colour is only for signed deltas and status."""
     from html import escape
     cells = "".join(
-        f"<div title='{escape(tip or '')}' style='background:#13263a;border:1px solid #22384f;border-radius:10px;padding:10px 12px'>"
-        f"<div style='font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;opacity:.7'>{escape(label)}"
-        f"{' ⓘ' if tip else ''}</div>"
-        f"<div style='font-size:1.55rem;font-weight:700;color:{colour or '#e5e7eb'};line-height:1.25'>{escape(value)}</div>"
-        f"<div style='font-size:.78rem;opacity:.65'>{escape(sub or '')}</div></div>"
+        f"<div class='tile' title='{escape(tip or '')}'><div class='l'>{escape(label)}{' ⓘ' if tip else ''}</div>"
+        f"<div class='v' style='color:{colour or INK}'>{escape(value)}</div><div class='s'>{escape(sub or '')}</div></div>"
         for label, value, sub, colour, tip in items)
-    st.markdown(f"<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax({min_w}px,1fr));gap:8px;"
-                f"margin:4px 0 12px'>{cells}</div>", unsafe_allow_html=True)
+    n = cols or len(items)
+    st.markdown(f"<style>.t{n}{{grid-template-columns:repeat({n},minmax(0,1fr))}}"
+                f"@media (max-width:1100px){{.t{n}{{grid-template-columns:repeat(auto-fill,minmax({min_w}px,1fr))}}}}</style>"
+                f"<div class='tiles t{n}'>{cells}</div>", unsafe_allow_html=True)
+
+
+def signed(v):
+    """Text colour for a signed value: green up, red down (the sign is always shown too)."""
+    return GOOD if v > 0 else BAD if v < 0 else None
 
 
 # ---------------------------------------------------------------- explorer helpers (batter and bowler pages)
@@ -163,21 +209,25 @@ def rank_tiles(field, who, cols, label):
         rk = int(field[col].rank(ascending=False, method="min")[who])
         pct = round(100 * (1 - (rk - 1) / len(field)))
         items.append((f"{k} per ball", f"#{rk}", f"of {len(field):,} · {ordinal(pct)} percentile",
-                      "#4ade80" if pct >= 75 else "#fbbf24" if pct >= 40 else "#f87171", None))
-    st.markdown(f"**Rankings** among the {len(field):,} {label} under the same filters")
+                      GOOD if pct >= 75 else WARN if pct >= 40 else BAD, None))
+    st.markdown(f"<div class='app-eyebrow'>Rankings · among the {len(field):,} {label} under the same filters</div>",
+                unsafe_allow_html=True)
     tiles(items, min_w=170)
 
 
-def heatmap(cells, metric, fmt, mid, good_high=True, height=330, scheme=None):
-    """Line x length grid. cells: one row per (length, line) with the metric column; red = good for the batter."""
+def heatmap(cells, metric, fmt, mid, good_high=True, height=330, sequential=False):
+    """Line x length grid. cells: one row per (length, line) with the metric column. Diverging: red = good for
+    the batter, blue = good for the bowler, grey = average. Sequential: one blue hue, darker = less."""
     import altair as alt
-    scale = alt.Scale(scheme=scheme) if scheme else alt.Scale(scheme="redblue", reverse=good_high, domainMid=mid)
+    ends = ["#3987e5", "#e66767"] if good_high else ["#e66767", "#3987e5"]
+    scale = (alt.Scale(range=SEQ) if sequential else
+             alt.Scale(range=[ends[0], DIV_MID, ends[1]], domainMid=mid, interpolate="lab"))
     base = alt.Chart(cells).encode(x=alt.X("line:N", sort=LINES, title=None, axis=alt.Axis(orient="top", labelAngle=0, labelLimit=0, labelOverlap=False, labelFontSize=11)),
                                    y=alt.Y("length:N", sort=LENGTHS, title=None))
-    tips = [c for c in cells.columns if c not in ("length", "line")]
-    st.altair_chart((base.mark_rect().encode(color=alt.Color(f"{metric}:Q", scale=scale), tooltip=["length", "line"] + tips)
+    tips = [alt.Tooltip(f"{c}:Q", format=".2f") if c != "balls" else c for c in cells.columns if c not in ("length", "line")]
+    st.altair_chart((base.mark_rect(cornerRadius=3, stroke=SURFACE, strokeWidth=2).encode(color=alt.Color(f"{metric}:Q", scale=scale), tooltip=["length", "line"] + tips)
                      + base.mark_text(fontSize=13, fontWeight="bold").encode(text=alt.Text(f"{metric}:Q", format=fmt),
-                                                                             color=alt.value("#0b1622")))
+                                                                             color=alt.value("#ffffff")))
                     .properties(height=height), width="stretch")
 
 
@@ -193,10 +243,10 @@ def wheel(z, left_handed, title=None):
     g["theta1"], g["mid"] = g.theta0 + np.pi / 4, g.theta0 + np.pi / 8
     g["label"] = g.zone.astype(str) + " " + g.share.round(0).astype(int).astype(str) + "%"
     base = alt.Chart(g).properties(width=340, height=340, title=title or "")
-    arcs = base.mark_arc(innerRadius=38, outerRadius=130, stroke="#0b1622", strokeWidth=2).encode(
+    arcs = base.mark_arc(innerRadius=38, outerRadius=130, stroke="#121211", strokeWidth=2).encode(
         theta=alt.Theta("theta0:Q", scale=None), theta2="theta1:Q",
-        color=alt.Color("share:Q", scale=alt.Scale(scheme="goldorange"), legend=None),
+        color=alt.Color("share:Q", scale=alt.Scale(range=SEQ), legend=None),
         tooltip=["zone", "runs", alt.Tooltip("share:Q", format=".1f", title="% of runs"), "balls", "outs"])
-    text = base.mark_text(radius=152, fontSize=11, color="#e5e7eb").encode(theta=alt.Theta("mid:Q", scale=None), text="label:N")
+    text = base.mark_text(radius=152, fontSize=11, color=INK2).encode(theta=alt.Theta("mid:Q", scale=None), text="label:N")
     st.altair_chart(arcs + text, width="content")
     return g

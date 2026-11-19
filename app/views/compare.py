@@ -1,9 +1,9 @@
 import altair as alt
 import streamlit as st
-from lib import data, footer
+from lib import data, footer, header
 
-st.title("⚖️ Compare players")
-st.caption("Career totals and season-by-season value, side by side.")
+header("Compare players", "Career totals and season-by-season value, side by side, for up to five players.",
+       eyebrow="Squad and auction")
 
 c = st.columns([1, 1, 3])
 role = c[0].radio("Role", ["Batting", "Bowling"], horizontal=True)
@@ -24,13 +24,20 @@ if pick:
                                   raa=("raa", "sum"), waa=("waa", "sum"), impact=("impact", "sum"), wpa=("wpa", "sum"))
     car["RAA/100"] = 100 * car.raa / car.balls
     car["WPA/100"] = 100 * car.wpa / car.balls
-    st.dataframe(car.sort_values("wpa", ascending=False).round(2), width="stretch")
-    metric = st.radio("Season metric", ["wpa", "raa", "raa_100", "impact"], horizontal=True)
+    N = st.column_config.NumberColumn
+    st.dataframe(car.sort_values("wpa", ascending=False), width="stretch", column_config={
+        "seasons": N("Seasons"), "balls": N("Balls"), "runs": N("Runs" if role == "Batting" else "Runs conceded"),
+        "raa": N("RAA", format="%+.1f"), "waa": N("WAA", format="%+.1f"), "impact": N("Impact", format="%+.1f"),
+        "wpa": N("WPA", format="%+.2f"), "RAA/100": N(format="%+.2f"), "WPA/100": N(format="%+.3f")})
+    names_ = {"wpa": "WPA", "raa": "RAA", "raa_100": "RAA per 100 balls", "impact": "Impact"}
+    metric = st.radio("Season metric", list(names_), format_func=names_.get, horizontal=True)
     s = d.groupby(["player", "year"], as_index=False)[["wpa", "raa", "impact", "balls"]].sum()
     s["raa_100"] = (100 * s.raa / s.balls).round(1)
-    st.altair_chart(alt.Chart(s).mark_line(point=True).encode(
-        x=alt.X("year:O", title="Season"), y=alt.Y(f"{metric}:Q"), color=alt.Color("player:N", title=None),
-        tooltip=["player", "year", metric, "balls"]), width="stretch")
+    st.altair_chart(alt.Chart(s).mark_line(point=alt.OverlayMarkDef(size=60, filled=True), strokeWidth=2).encode(
+        x=alt.X("year:O", title="Season"), y=alt.Y(f"{metric}:Q", title=names_[metric]),
+        color=alt.Color("player:N", title=None, sort=pick, legend=alt.Legend(orient="top")),
+        tooltip=["player", "year", alt.Tooltip(f"{metric}:Q", format="+.2f"), "balls"]).properties(height=360),
+        width="stretch")
 else:
-    st.info("Pick at least one player.")
+    st.caption("Pick at least one player.")
 footer()

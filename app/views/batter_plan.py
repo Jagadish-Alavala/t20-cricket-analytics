@@ -1,11 +1,13 @@
 import altair as alt
 import pandas as pd
 import streamlit as st
-from lib import out, batters, field_tool_html, PHASES, PHASE_ORDER, LENGTHS, NICE, footer
+from lib import (out, batters, field_tool_html, PHASES, PHASE_ORDER, ZONE_LENGTHS, NICE, footer, header, tiles,
+                 signed, PACE_SPIN, SURFACE, DIV_MID)
 
-st.title("🎯 Plan for a batter")
-st.caption("Edges are against par for the same phase or zone, and shrunk toward zero when the sample is small. "
-           "Positive means good for the batter.")
+header("Plan for a batter",
+       "Where he is weak, in plain words, plus the field to set. Edges are against par for the same phase or zone "
+       "and shrunk toward zero on small samples; positive is good for the batter. Line-and-length data, 2020–2024.",
+       eyebrow="Match day")
 
 names = batters()
 bat = st.selectbox("Batter", names, index=names.index("Virat Kohli") if "Virat Kohli" in names else 0)
@@ -18,18 +20,21 @@ ent = out("entry_batters.csv").query("bat == @bat")
 prof = out("batter_phase_profile.csv").query("bat == @bat")
 sty = out("matchup_batter_vs_style.csv").query("bat == @bat")
 
-c = st.columns(5)
+items = []
 if len(ent):
     e = ent.iloc[0]
-    c[0].metric("Usual role", e.slot)
-    c[1].metric("Typical entry", f"Over {e.entry_over:.0f}", f"{e.entry_wkts:.0f} down", delta_color="off")
+    items += [("Usual role", e.slot, "", None, None),
+              ("Typical entry", f"Over {e.entry_over:.0f}", f"{e.entry_wkts:.0f} wickets down", None, None)]
 if len(prof):
-    c[2].metric("Best phase", PHASES[prof.iloc[0].best_phase])
-for i, k in enumerate(["pace", "spin"]):
+    items.append(("Best phase", PHASES[prof.iloc[0].best_phase].split(" (")[0], PHASES[prof.iloc[0].best_phase].split(" (")[1][:-1], None, None))
+for k in ["pace", "spin"]:
     r = kind[kind.kind == k]
     if len(r):
-        c[3 + i].metric(f"vs {k}: SR edge", f"{r.iloc[0].sr_edge:+.0f}",
-                        f"{r.iloc[0].dis_edge:+.1f} safety", delta_color="normal")
+        items.append((f"vs {k} · strike-rate edge", f"{r.iloc[0].sr_edge:+.0f}", f"safety edge {r.iloc[0].dis_edge:+.1f}",
+                      signed(r.iloc[0].sr_edge), "Strike rate against par for the same phase; safety = how much less often "
+                                                  "he gets out than par (positive is good for him)"))
+if items:
+    tiles(items, min_w=150)
 
 # ---- the plan in words
 plan = []
@@ -61,11 +66,11 @@ t1, t2, t3 = st.tabs(["By phase", "Line and length", "Field plan"])
 with t1:
     if len(kp):
         d = kp.assign(Phase=kp.phase.map(lambda p: PHASES[p].split(" (")[0]))
-        ch = alt.Chart(d).mark_bar().encode(
+        ch = alt.Chart(d).mark_bar(cornerRadiusEnd=4).encode(
             x=alt.X("Phase:N", sort=[PHASES[p].split(" (")[0] for p in PHASE_ORDER], title=None),
             xOffset="kind:N",
             y=alt.Y("sr_edge:Q", title="Strike-rate edge against par"),
-            color=alt.Color("kind:N", scale=alt.Scale(domain=["pace", "spin"], range=["#38bdf8", "#f59e0b"]), title=None),
+            color=alt.Color("kind:N", scale=alt.Scale(**PACE_SPIN), title=None),
             tooltip=["kind", "Phase", "balls", "runs", "outs", "sr", "sr_par", "sr_edge", "dis_edge"])
         st.altair_chart(ch, width="stretch")
     if len(prof):
@@ -74,20 +79,23 @@ with t1:
             f"{PHASES[k].split(' (')[0]} {p[f'edge_{k}']:+.0f} ({p[f'balls_{k}']:.0f} balls)" for k in PHASE_ORDER if pd.notna(p[f'edge_{k}'])))
 with t2:
     a, b = st.columns(2)
-    for col, z, field, order in ((a, zl, "length", LENGTHS + ["FULL_TOSS"]),
+    for col, z, field, order in ((a, zl, "length", ["FULL_TOSS"] + ZONE_LENGTHS),
                                   (b, zn, "line", ["WIDE_OUTSIDE_OFFSTUMP", "OUTSIDE_OFFSTUMP", "ON_THE_STUMPS", "DOWN_LEG"])):
         with col:
-            st.markdown(f"**Control edge by {field}**: red means he is less in control there, so bowl it")
+            st.markdown(f"**Control edge by {field}**: blue means he is less in control there, so bowl it")
             if len(z):
                 d = z.assign(zone=z[field].map(NICE))
-                ch = alt.Chart(d).mark_rect().encode(
+                ch = alt.Chart(d).mark_rect(cornerRadius=3, stroke=SURFACE, strokeWidth=2).encode(
                     x=alt.X("kind:N", title=None), y=alt.Y("zone:N", sort=[NICE(o) for o in order], title=None),
-                    color=alt.Color("ctrl_edge:Q", scale=alt.Scale(scheme="redyellowgreen", domainMid=0), title="Control edge"),
+                    color=alt.Color("ctrl_edge:Q", scale=alt.Scale(range=["#3987e5", DIV_MID, "#e66767"], domainMid=0, interpolate="lab"),
+                                    title="Control edge"),
                     tooltip=["kind", "zone", "balls", "runs", "sr", "ctrl", "ctrl_par", "ctrl_edge", "outs"])
-                txt = ch.mark_text(color="black").encode(text=alt.Text("ctrl_edge:Q", format="+.1f"), color=alt.value("#111"))
+                txt = alt.Chart(d).mark_text(fontWeight="bold").encode(
+                    x=alt.X("kind:N"), y=alt.Y("zone:N", sort=[NICE(o) for o in order]),
+                    text=alt.Text("ctrl_edge:Q", format="+.1f"), color=alt.value("#ffffff"))
                 st.altair_chart(ch + txt, width="stretch")
             else:
-                st.info("Not enough balls.")
+                st.caption("Not enough balls.")
 with t3:
     html = field_tool_html()
     if f'"{bat}"' in html:

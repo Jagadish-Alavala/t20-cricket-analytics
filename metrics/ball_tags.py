@@ -29,7 +29,7 @@ OUT = Path(__file__).resolve().parents[1] / "app" / "data" / "balls.parquet"
 SQL = """
 SELECT b.match_id, b.innings, b.seq, b.year, b.league, b.venue, b.batting_team, b.batter_key, b.batter_name AS batter,
        b.bowler_key, b.bowler, b.runs, b.bat_runs, b.wide, b.legal, b.is_wicket, b.run_out, b.out_key, b.balls_before,
-       b.wkts_before, b.raa, b.waa, b.impact, b.wpa, b.bowl_impact, b.raa_runs,
+       b.wkts_before, b.raa, b.waa, b.exp_wkts, b.impact, b.wpa, b.bowl_impact, b.raa_runs,
        COALESCE(json_extract(c.raw, '$.commentary.message'), json_extract(c.raw, '$.comments[0].message')) AS msg,
        json_extract(c.raw, '$.lengthTypeId') AS ca_len, json_extract(c.raw, '$.lineTypeId') AS ca_line,
        json_extract(c.raw, '$.battingConnectionId') AS ca_conn, json_extract(c.raw, '$.bowlingTypeId') AS ca_type, json_extract(c.raw, '$.battingHandId') AS ca_bat_hand,
@@ -238,6 +238,29 @@ def build(db):
     # ponytail: a non-striker run out lands on a ball he did not face, so it is dropped here (tiny)
     d["bowler_wkt"] = (d.is_wicket.astype(bool) & ~d.run_out.astype(bool)).astype("int8")
     d["b_raa"], d["b_waa"], d["b_impact"], d["b_wpa"] = -d.raa_runs, -d.waa, -d.bowl_impact, -d.wpa  # bowler's side
+    # a run out at the non-striker's end belongs to the batter run out: put it on the last ball he faced
+    last = d[d.wide == 0].reset_index().groupby(["match_id", "innings", "batter_key"], observed=True)["index"].max()
+    ns = d[d.is_wicket.astype(bool) & d.out_key.notna() & (d.out_key != d.batter_key) & (d.wide == 0)]
+    idx = last.reindex(list(zip(ns.match_id, ns.innings, ns.out_key))).dropna().astype(int)
+    d.loc[idx.values, "out"] = 1
+    d.loc[idx.values, "dismissal"] = "Run out"
+    d["waa"] = d.exp_wkts - d.out  # batter: his own dismissals only (the view's waa, ball by ball)
+
+    # Players are picked by name, which joins one player's BCCI and CA ids (BCCI even uses different ids for
+    # IPL and internationals). Two linked ids from the same source with one name in the same league and season are two people (two Amit
+    # Mishras in SMAT 2019): those ids get their team added. ponytail: same-name players who never meet in one
+    # league-season stay merged; a proper people register would fix that.
+    teams = d.groupby("match_id").batting_team.agg(lambda s: set(s.dropna()))
+    d["bowling_team"] = [next(iter(teams[m] - {t}), None) for m, t in zip(d.match_id, d.batting_team)]
+    for who, key, team in (("batter", "batter_key", "batting_team"), ("bowler", "bowler_key", "bowling_team")):
+        src = d[key].astype(str).str.split(":").str[0]
+        linked = d[src != "?"]  # '?:' ids are unlinked names, never a second person
+        n = linked.groupby([linked[who], src[src != "?"], linked.league, linked.year], observed=True)[key].transform("nunique")
+        clash_keys = set(linked.loc[n > 1, key].dropna())
+        side = d[d[key].isin(clash_keys)].groupby(key, observed=True)[team].agg(
+            lambda s: s.mode().iloc[0] if s.notna().any() else "")
+        lab = d[key].map(side)
+        d[who] = np.where(lab.notna(), d[who].astype(str) + " (" + lab.fillna("") + ")", d[who])
 
     keep = ["match_id", "innings", "year", "league", "venue", "batting_team", "batter_key", "batter", "bat_hand",
             "bowler_key", "bowler", "kind", "style", "runs", "bat_runs", "wide", "legal", "out", "bowler_wkt", "dismissal",
