@@ -17,6 +17,7 @@ The app runs on the derived tables in `outputs/` and `app/data/`, so it needs no
 
 | Page | For | What it does |
 |---|---|---|
+| 🔎 Batter explorer | Coach, analyst | Filter any batter by league, years, pace or spin, bowler type, length, line, innings, phase, entry over and venue. Shows the stat strip, RAA/WAA/Impact/WPA per ball with rankings against the same filters, a profile, a line × length heatmap and a wagon wheel. Needs the local ball-by-ball table (`metrics/ball_tags.py`) |
 | 🎯 Plan for a batter | Coach | Weak phases, lengths, lines and bowling styles, the plan in plain words, and the interactive field plan |
 | 🎳 Use a bowler | Coach | Phase usage and length mix, plus the batters to bowl him at and the ones to keep him away from |
 | 📋 Who bats next | Coach, captain | Set the over, the situation and the bowlers left; it ranks the batters to come and names who each should target |
@@ -92,6 +93,7 @@ The implementation agrees with the primer's published IPL 2026 tables: WPA corre
 | `t20_metrics.py` | Builds every metric into the database |
 | `t20_report.py` | Batting and bowling reports by date range, league or player-season |
 | `t20_validate.py` | Checks against the primer's worked examples and published tables |
+| `ball_tags.py` | Tags every ball with length, line, footwork and shot area from the commentary (99% agreement with Cricket Australia's own fields), and control where CA records it. Writes the explorer's per-ball table |
 | `impact_player.py` | Difference in differences: IPL against the T20 Blast and CPL, with SMAT as an on/off case, bootstrapped over matches |
 
 **Impact Player finding:** IPL top orders got faster (top-3 RAA up about 7 per 100 balls relative to the control leagues) but not more valuable: there was no change in WPA.

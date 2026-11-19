@@ -6,7 +6,7 @@ xgboost
 scipy
 matplotlib
 seaborn
-streamlit
+streamlit>=1.67
 pyarrow
 joblib
 statsmodels

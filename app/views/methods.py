@@ -20,10 +20,10 @@ with a:
     st.markdown("**Expected-runs error by stage of innings** (trained 2020–23, tested on 2024)")
     d = pd.DataFrame(m1["by_bucket"]).melt(id_vars=["bucket", "n"], value_vars=["model_MAE", "naive_MAE"], var_name="model", value_name="MAE")
     st.altair_chart(alt.Chart(d).mark_bar().encode(x=alt.X("bucket:N", title="Balls bowled", sort=None), xOffset="model:N",
-                    y="MAE:Q", color=alt.Color("model:N", title=None), tooltip=["bucket", "model", "MAE", "n"]), use_container_width=True)
+                    y="MAE:Q", color=alt.Color("model:N", title=None), tooltip=["bucket", "model", "MAE", "n"]), width="stretch")
 with b:
     st.markdown("**Season Impact and RAA against the published reference**")
-    st.dataframe(out("reference_vs_ours.csv"), hide_index=True, use_container_width=True)
+    st.dataframe(out("reference_vs_ours.csv"), hide_index=True, width="stretch")
 
 st.markdown("""
 ### How it is built

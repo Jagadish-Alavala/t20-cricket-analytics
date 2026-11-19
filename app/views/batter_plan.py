@@ -1,7 +1,6 @@
 import altair as alt
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 from lib import out, batters, field_tool_html, PHASES, PHASE_ORDER, LENGTHS, NICE, footer
 
 st.title("🎯 Plan for a batter")
@@ -68,7 +67,7 @@ with t1:
             y=alt.Y("sr_edge:Q", title="Strike-rate edge against par"),
             color=alt.Color("kind:N", scale=alt.Scale(domain=["pace", "spin"], range=["#38bdf8", "#f59e0b"]), title=None),
             tooltip=["kind", "Phase", "balls", "runs", "outs", "sr", "sr_par", "sr_edge", "dis_edge"])
-        st.altair_chart(ch, use_container_width=True)
+        st.altair_chart(ch, width="stretch")
     if len(prof):
         p = prof.iloc[0]
         st.caption("Value added by phase (runs against par per 100 balls): " + " · ".join(
@@ -86,7 +85,7 @@ with t2:
                     color=alt.Color("ctrl_edge:Q", scale=alt.Scale(scheme="redyellowgreen", domainMid=0), title="Control edge"),
                     tooltip=["kind", "zone", "balls", "runs", "sr", "ctrl", "ctrl_par", "ctrl_edge", "outs"])
                 txt = ch.mark_text(color="black").encode(text=alt.Text("ctrl_edge:Q", format="+.1f"), color=alt.value("#111"))
-                st.altair_chart(ch + txt, use_container_width=True)
+                st.altair_chart(ch + txt, width="stretch")
             else:
                 st.info("Not enough balls.")
 with t3:
@@ -95,7 +94,7 @@ with t3:
         html = html.replace('NAMES.includes("Rohit Sharma")?"Rohit Sharma"', f'NAMES.includes({bat!r})?{bat!r}'.replace("'", '"'))
     else:
         st.info(f"{bat} is not in the field-tool set (77 batters with enough zone data). Showing the default.")
-    components.html(html, height=900, scrolling=True)
+    st.iframe(html, height=900)
 
 with st.expander("Raw tables"):
     st.dataframe(kp, hide_index=True)

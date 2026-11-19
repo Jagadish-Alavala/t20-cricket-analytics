@@ -29,14 +29,14 @@ with a:
         d = pd.DataFrame({"Phase": ["Powerplay", "Middle", "Death"], "share": [e.PP, e.MID, e.DEATH]})
         st.altair_chart(alt.Chart(d).mark_bar(color="#22c55e").encode(
             x=alt.X("Phase:N", sort=None, title=None), y=alt.Y("share:Q", title="% of balls"), tooltip=["Phase", "share"]),
-            use_container_width=True)
+            width="stretch")
 with b:
     st.markdown("**Length mix**")
     m = mix[(mix.bowl == bo) & (mix.kind == kind)].assign(Length=lambda x: x.length.map(NICE), pct=lambda x: 100 * x.share)
     st.altair_chart(alt.Chart(m).mark_bar(color="#38bdf8").encode(
         y=alt.Y("Length:N", sort=[NICE(l) for l in LENGTHS + ["FULL_TOSS"]], title=None),
         x=alt.X("pct:Q", title="% of balls"), tooltip=["Length", alt.Tooltip("pct:Q", format=".1f")]),
-        use_container_width=True)
+        width="stretch")
 
 rows = []
 for bat in batters():
@@ -47,10 +47,10 @@ df = df[(df[f"SR edge vs {kind}"] != 0) | (df["Control edge on his lengths"] != 
 x, y = st.columns(2)
 with x:
     st.markdown("#### ✅ Bowl him at")
-    st.dataframe(df.nsmallest(12, "Matchup"), hide_index=True, use_container_width=True)
+    st.dataframe(df.nsmallest(12, "Matchup"), hide_index=True, width="stretch")
 with y:
     st.markdown("#### ⚠️ Keep him away from")
-    st.dataframe(df.nlargest(12, "Matchup"), hide_index=True, use_container_width=True)
+    st.dataframe(df.nlargest(12, "Matchup"), hide_index=True, width="stretch")
 st.caption("Matchup = the batter's strike-rate edge against this bowler type, plus 2.5 × his control edge on this "
            "bowler's lengths, weighted by how often he bowls each one. Negative favours the bowler.")
 footer()

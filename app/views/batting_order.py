@@ -21,7 +21,7 @@ with r:
     st.markdown("**Bowlers with overs left**")
     start = pd.DataFrame({"Bowler": [b for b in ["Jasprit Bumrah", "Matheesha Pathirana", "Yuzvendra Chahal"] if b in kinds],
                           "Overs left": [2, 2, 1][:3]})
-    ed = st.data_editor(start, num_rows="dynamic", use_container_width=True, hide_index=True, column_config={
+    ed = st.data_editor(start, num_rows="dynamic", width="stretch", hide_index=True, column_config={
         "Bowler": st.column_config.SelectboxColumn(options=sorted(kinds), required=True),
         "Overs left": st.column_config.NumberColumn(min_value=0, max_value=4, step=1, required=True)})
 
@@ -36,8 +36,8 @@ else:
     st.altair_chart(alt.Chart(res).mark_bar().encode(
         y=alt.Y("Batter:N", sort="-x", title=None), x=alt.X("Score:Q"),
         color=alt.condition(alt.datum.Batter == top.Batter, alt.value("#22c55e"), alt.value("#475569")),
-        tooltip=list(res.columns)), use_container_width=True)
-    st.dataframe(res, hide_index=True, use_container_width=True)
+        tooltip=list(res.columns)), width="stretch")
+    st.dataframe(res, hide_index=True, width="stretch")
     with st.expander("How the score works"):
         st.markdown("""
 - **Phase fit**: the batter's runs against par in each phase, weighted by how many of the remaining overs fall in that phase.

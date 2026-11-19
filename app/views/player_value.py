@@ -36,7 +36,7 @@ for tab, file, runs_label in ((tab_bat, "batting_seasons.csv", "runs"), (tab_bow
         d = d.sort_values(sort, ascending=False).reset_index(drop=True)
         d.index += 1
         hi = max(float(d.wpa.abs().max()), 0.01) if len(d) else 1.0
-        st.dataframe(d.drop(columns="league"), use_container_width=True, height=420, column_config={
+        st.dataframe(d.drop(columns="league"), width="stretch", height=420, column_config={
             "year": st.column_config.NumberColumn(format="%d"),
             "runs": st.column_config.NumberColumn(runs_label),
             "wpa": st.column_config.ProgressColumn("WPA", format="%.2f", min_value=-hi, max_value=hi),
@@ -48,5 +48,5 @@ for tab, file, runs_label in ((tab_bat, "batting_seasons.csv", "runs"), (tab_bow
                 x=alt.X("raa_100:Q", title="RAA per 100 balls"), y=alt.Y("wpa:Q", title="WPA"),
                 size=alt.Size("balls:Q", legend=None), color=alt.Color("year:O", title="Season"),
                 tooltip=["player", "year", "balls", "runs", "raa", "raa_100", "wpa", "impact"])
-            st.altair_chart(ch.interactive(), use_container_width=True)
+            st.altair_chart(ch.interactive(), width="stretch")
 footer()

@@ -119,3 +119,24 @@ def footer():
     st.divider()
     st.caption("Metric definitions: Himanish Ganjoo, *T20 Metrics: A Primer*. "
                "Data: BCCI, Cricket Australia, Cricsheet (ODC-BY), Wikidata (CC0). Built by Jagadish Alavala.")
+
+
+@st.cache_data(show_spinner="Loading ball-by-ball data…")
+def balls():
+    """Per-ball batting table from metrics/ball_tags.py, or None when it hasn't been built."""
+    p = DATA / "balls.parquet"
+    return pd.read_parquet(p) if p.exists() else None
+
+
+def tiles(items, min_w=120):
+    """Responsive stat strip: items are (label, value, sub, colour, tooltip); tiles wrap instead of truncating."""
+    from html import escape
+    cells = "".join(
+        f"<div title='{escape(tip or '')}' style='background:#13263a;border:1px solid #22384f;border-radius:10px;padding:10px 12px'>"
+        f"<div style='font-size:.72rem;letter-spacing:.06em;text-transform:uppercase;opacity:.7'>{escape(label)}"
+        f"{' ⓘ' if tip else ''}</div>"
+        f"<div style='font-size:1.55rem;font-weight:700;color:{colour or '#e5e7eb'};line-height:1.25'>{escape(value)}</div>"
+        f"<div style='font-size:.78rem;opacity:.65'>{escape(sub or '')}</div></div>"
+        for label, value, sub, colour, tip in items)
+    st.markdown(f"<div style='display:grid;grid-template-columns:repeat(auto-fill,minmax({min_w}px,1fr));gap:8px;"
+                f"margin:4px 0 12px'>{cells}</div>", unsafe_allow_html=True)

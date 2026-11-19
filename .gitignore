@@ -19,3 +19,4 @@ bcci_commentary.py
 ca_commentary.py
 cricsheet_ipl.py
 daily.sh
+app/data/balls.parquet

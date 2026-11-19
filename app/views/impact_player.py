@@ -1,7 +1,6 @@
 import altair as alt
 import pandas as pd
 import streamlit as st
-import streamlit.components.v1 as components
 from lib import data, story_html, footer
 
 st.title("🔄 What the Impact Player rule changed")
@@ -26,7 +25,7 @@ with t1:
     base = alt.Chart(t).encode(x=alt.X("year:O", title=None), y=alt.Y(f"{metric}:Q", scale=alt.Scale(zero=False)),
                                color=alt.Color("league:N", title=None))
     st.altair_chart(base.mark_line() + base.mark_point(filled=True).encode(
-        shape=alt.Shape("rule:N", title="Rule in force"), tooltip=list(t.columns)), use_container_width=True)
+        shape=alt.Shape("rule:N", title="Rule in force"), tooltip=list(t.columns)), width="stretch")
 with t2:
     rc = data("impact_player_roles_change.csv")
     rc.columns = ["comparison", "order", "measure", "change", "lo95", "hi95"]
@@ -36,11 +35,11 @@ with t2:
     x = d[d.measure == meas]
     bars = alt.Chart(x).mark_bar(color="#38bdf8").encode(x=alt.X("batting order:N", sort=None, title=None), y=alt.Y("change:Q", title=f"IPL change minus controls ({meas})"))
     err = alt.Chart(x).mark_errorbar(color="#e5e7eb").encode(x=alt.X("batting order:N", sort=None), y="lo95:Q", y2="hi95:Q")
-    st.altair_chart(bars + err, use_container_width=True)
+    st.altair_chart(bars + err, width="stretch")
     st.caption("2023–26 against 2019–22, IPL minus the Blast and CPL. Bars that cross zero are not distinguishable from no change.")
 with t3:
     ld = data("impact_player_wpa_leaders.csv").drop(columns="batter_key")
-    st.dataframe(ld, hide_index=True, use_container_width=True)
+    st.dataframe(ld, hide_index=True, width="stretch")
 with t4:
-    components.html(story_html(), height=1200, scrolling=True)
+    st.iframe(story_html(), height=1200)
 footer()
